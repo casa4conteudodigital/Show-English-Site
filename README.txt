@@ -2,8 +2,8 @@ SHOW ENGLISH - SITE
 
 Arquivos principais:
 - index.html
-- style.css
-- script.js
+- style/ (contém style.css)
+- javascript/ (contém script.js)
 - assets/
 
 Imagens já incluídas:
