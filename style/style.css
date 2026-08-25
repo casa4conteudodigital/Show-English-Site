@@ -98,6 +98,10 @@ button { font: inherit; }
 .hero-decoration-1 { width: 350px; height: 350px; right: -120px; top: -100px; background: var(--pink); }
 .hero-decoration-2 { width: 280px; height: 280px; left: -150px; bottom: -130px; background: var(--blue); }
 
+.explanation-video-section { padding: 55px 0 30px; background: var(--white); }
+.explanation-video-frame { width: min(100%, 980px); aspect-ratio: 16 / 9; margin: 0 auto; overflow: hidden; border-radius: var(--radius-large); background: #071b3d; box-shadow: var(--shadow); }
+.explanation-video { display: block; width: 100%; height: 100%; object-fit: contain; background: #071b3d; }
+
 .transition-band { padding: 26px 0 0; background: linear-gradient(180deg, #ffffff 0%, #f4f7fb 100%); }
 .transition-box { display: grid; grid-template-columns: 1.3fr .7fr; align-items: center; gap: 28px; padding: 38px 42px; border: 1px solid rgba(10, 24, 75, 0.08); border-radius: 26px; background: linear-gradient(135deg, rgba(6, 27, 75, 0.96), rgba(13, 74, 166, 0.9)); box-shadow: 0 18px 45px rgba(9, 23, 60, 0.12); }
 .transition-box .section-label { margin-bottom: 10px; color: var(--yellow); }
