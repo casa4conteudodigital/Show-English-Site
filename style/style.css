@@ -8,6 +8,7 @@
   --blue-vivid: #1539c8;
   --pink: #ed1774;
   --pink-light: #ff3b91;
+  --pink-soft: #ff8fbd;
   --red: #ef242d;
   --yellow: #ffd21c;
   --green: #0ea83b;
@@ -73,8 +74,8 @@ button { font: inherit; }
 .hero-grid { min-height: 820px; display: grid; grid-template-columns: .9fr 1.1fr; align-items: center; gap: 55px; padding: 70px 0 80px; }
 .hero-copy { position: relative; z-index: 2; }
 .eyebrow { display: inline-block; color: var(--yellow); font-size: 14px; letter-spacing: 1.7px; font-weight: 900; margin-bottom: 20px; }
-.hero h1 { max-width: 680px; font-family: var(--font-display); font-size: clamp(38px, 4.4vw, 60px); line-height: .98; letter-spacing: -2.5px; margin-bottom: 28px; color: var(--pink-light); }
-.hero h1 span { display: block; color: var(--pink-light); }
+.hero h1 { max-width: 680px; font-family: var(--font-display); font-size: clamp(38px, 4.4vw, 60px); line-height: .98; letter-spacing: -2.5px; margin-bottom: 28px; color: var(--pink-soft); }
+.hero h1 span { display: block; color: var(--pink-soft); }
 .hero-description { max-width: 610px; color: rgba(255, 255, 255, .94); font-size: 22px; line-height: 1.6; margin-bottom: 32px; }
 .hero-question { margin-bottom: 14px; font-family: var(--font-display); font-style: italic; font-weight: 800; color: var(--white); }
 .hero-whatsapp-button { width: min(100%, 470px); min-height: 68px; gap: 12px; margin-bottom: 18px; font-size: 20px; }
