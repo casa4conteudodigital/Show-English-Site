@@ -84,6 +84,7 @@ button { font: inherit; }
 
 .hero-image-area { position: relative; display: flex; align-items: center; justify-content: center; z-index: 2; }
 .hero-image-frame { position: relative; width: min(100%, 520px); aspect-ratio: 9 / 16; border-radius: var(--radius-large); overflow: hidden; background: linear-gradient(150deg, #19275b, #090f2a); box-shadow: var(--shadow-heavy); border: 1px solid rgba(255, 255, 255, .18); }
+.explanation-hero-frame { aspect-ratio: 16 / 9; }
 .hero-image { width: 100%; height: 100%; object-fit: contain; object-position: center; }
 .hero-video { display: block; background: linear-gradient(150deg, #19275b, #090f2a); }
 .hero-image-frame::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(3,19,53,.5), transparent 45%); pointer-events: none; }
@@ -97,6 +98,7 @@ button { font: inherit; }
 
 .explanation-video-section { padding: 55px 0 30px; background: var(--white); }
 .explanation-video-frame { width: min(100%, 980px); aspect-ratio: 16 / 9; margin: 0 auto; overflow: hidden; border-radius: var(--radius-large); background: #071b3d; box-shadow: var(--shadow); }
+.lidi-video-frame { width: min(100%, 520px); aspect-ratio: 9 / 16; }
 .explanation-video { display: block; width: 100%; height: 100%; object-fit: contain; background: #071b3d; }
 .explanation-whatsapp-button { display: flex; width: min(100%, 470px); min-height: 68px; gap: 12px; margin: 24px auto 0; font-size: 20px; }
 .explanation-whatsapp-button img { width: 30px; height: 30px; object-fit: contain; flex-shrink: 0; }
