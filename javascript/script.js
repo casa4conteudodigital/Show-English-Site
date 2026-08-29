@@ -63,6 +63,26 @@ const frequentQuestions = [
   }
 ];
 
+function trackWhatsAppLead() {
+  if (typeof window.gtag !== 'function') return;
+
+  const transactionId = 'wa-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+
+  window.gtag('event', 'conversion', {
+    'send_to': 'AW-17833711571/NoaVCLz019cbENOv47dC',
+    'value': 1.0,
+    'currency': 'BRL',
+    'transaction_id': transactionId,
+    'event_category': 'WhatsApp',
+    'event_label': 'Clique WhatsApp'
+  });
+}
+
+const whatsappLinks = document.querySelectorAll('a[href*="wa.me"], a[href*="wa.link"], a[href*="api.whatsapp.com"]');
+whatsappLinks.forEach(link => {
+  link.addEventListener('click', trackWhatsAppLead, { passive: true });
+});
+
 const carouselTrack = document.getElementById("carouselTrack");
 const carouselDots = document.getElementById("carouselDots");
 const carouselPrev = document.getElementById("carouselPrev");
