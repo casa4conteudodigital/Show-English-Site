@@ -63,24 +63,30 @@ const frequentQuestions = [
   }
 ];
 
-function trackWhatsAppLead() {
-  if (typeof window.gtag !== 'function') return;
+function gtag_report_conversion(url) {
+  if (typeof window.gtag !== 'function') return false;
 
-  const transactionId = 'wa-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+  const callback = function () {
+    if (typeof url !== 'undefined' && url) {
+      window.open(url, '_blank', 'noopener');
+    }
+  };
 
   window.gtag('event', 'conversion', {
-    'send_to': 'AW-17833711571/NoaVCLz019cbENOv47dC',
-    'value': 1.0,
-    'currency': 'BRL',
-    'transaction_id': transactionId,
-    'event_category': 'WhatsApp',
-    'event_label': 'Clique WhatsApp'
+    'send_to': 'AW-17833711571/LuSZCOnmluocENOv47dC',
+    'event_callback': callback
   });
+
+  return false;
 }
 
 const whatsappLinks = document.querySelectorAll('a[href*="wa.me"], a[href*="wa.link"], a[href*="api.whatsapp.com"]');
 whatsappLinks.forEach(link => {
-  link.addEventListener('click', trackWhatsAppLead, { passive: true });
+  link.addEventListener('click', function (event) {
+    event.preventDefault();
+    const url = link.getAttribute('href');
+    gtag_report_conversion(url);
+  }, { passive: false });
 });
 
 const carouselTrack = document.getElementById("carouselTrack");
