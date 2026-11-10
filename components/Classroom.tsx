@@ -1,18 +1,21 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Video, VideoOff, Mic, MicOff, PhoneOff } from "lucide-react";
 import { LiveKitRoom } from "@livekit/components-react";
 import "@livekit/components-styles";
 import LiveSession from "./LiveSession";
 import { apiRequest } from "../lib/supabase";
+import { supabase } from "../lib/supabase";
 import { usePreferences } from "./Preferences";
 export default function Classroom() {
   const { t } = usePreferences();
   const query = useSearchParams();
+  const params = useParams<{ id?: string }>();
+  const router = useRouter();
   const demo = query.get("demo") === "1";
-  const id = query.get("id");
+  const id = params?.id || query.get("id");
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const alive = useRef(true);
@@ -21,9 +24,11 @@ export default function Classroom() {
   const [mic, setMic] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [roomTitle, setRoomTitle] = useState("");
   const [connection, setConnection] = useState<{
-    token: string;
-    url: string;
+    participantToken: string;
+    serverUrl: string;
+    connectionId: string;
   } | null>(null);
   function stop() {
     stream.current?.getTracks().forEach((track) => track.stop());
@@ -32,11 +37,27 @@ export default function Classroom() {
   }
   useEffect(() => {
     alive.current = true;
+    if (!demo && supabase) {
+      void supabase.auth.getSession().then(({ data }) => {
+        if (alive.current && !data.session) {
+          const next = id ? `/salas/${encodeURIComponent(id)}` : "/salas";
+          router.replace(`/colaboradores?next=${encodeURIComponent(next)}`);
+          return;
+        }
+        if (alive.current && data.session && id) {
+          void apiRequest(`/rooms/${encodeURIComponent(id)}`).then((room) => {
+            if (alive.current) setRoomTitle(room.title);
+          }).catch((error: unknown) => {
+            if (alive.current) setError(error instanceof Error ? error.message : "Você não tem acesso a esta sala.");
+          });
+        }
+      });
+    }
     return () => {
       alive.current = false;
       stream.current?.getTracks().forEach((track) => track.stop());
     };
-  }, []);
+  }, [demo, id, router]);
   useEffect(() => {
     if (video.current) video.current.srcObject = stream.current;
   }, [preview]);
@@ -68,7 +89,14 @@ export default function Classroom() {
     setBusy(true);
     setError("");
     try {
-      const data = await apiRequest("/rooms/token", { room_id: id });
+      if (!id) throw new Error("Sala inválida.");
+      const storageKey = `show-room-connection:${id}`;
+      let connectionId = sessionStorage.getItem(storageKey);
+      if (!connectionId) {
+        connectionId = crypto.randomUUID();
+        sessionStorage.setItem(storageKey, connectionId);
+      }
+      const data = await apiRequest(`/rooms/${encodeURIComponent(id)}/token`, { connection_id: connectionId });
       if (alive.current) {
         stop();
         setConnection(data);
@@ -83,6 +111,14 @@ export default function Classroom() {
       if (alive.current) setBusy(false);
     }
   }
+  async function endConnection() {
+    if (connection && id) {
+      try {
+        await apiRequest(`/rooms/${encodeURIComponent(id)}/leave`, { connection_id: connection.connectionId });
+      } catch {}
+    }
+    setConnection(null);
+  }
   return (
     <main className="portal" id="conteudo">
       <div className="portal-container">
@@ -90,14 +126,14 @@ export default function Classroom() {
           <div>
             <span className="overline">SHOW ENGLISH • {t("SALA DE AULA")}</span>
             <h1>
-              {t(demo ? "Sala de demonstração" : "Prepare-se para a aula")}
+              {roomTitle || t(demo ? "Sala de demonstração" : "Prepare-se para a aula")}
             </h1>
           </div>
           <Link
             className="secondary-action"
-            href={"/colaboradores/painel" + (demo ? "?demo=1" : "")}
+            href={demo ? "/colaboradores/painel?demo=1" : "/salas"}
           >
-            {t("Voltar ao painel")}
+            {t("Voltar às salas")}
           </Link>
         </div>
         {demo && (
@@ -113,12 +149,12 @@ export default function Classroom() {
         {connection ? (
           <div className="live-room" data-lk-theme="default">
             <LiveKitRoom
-              token={connection.token}
-              serverUrl={connection.url}
+              token={connection.participantToken}
+              serverUrl={connection.serverUrl}
               connect
               video={cam}
               audio={mic}
-              onDisconnected={() => setConnection(null)}
+              onDisconnected={endConnection}
               onError={() => {
                 setError("Não foi possível conectar. Tente novamente.");
                 setConnection(null);

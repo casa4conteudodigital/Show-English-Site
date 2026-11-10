@@ -4,7 +4,9 @@ import {
   useLocalParticipant,
   useTracks,
   ParticipantTile,
+  MediaDeviceMenu,
   RoomAudioRenderer,
+  useAudioPlayback,
   useRoomContext,
 } from "@livekit/components-react";
 import { Track, ConnectionState } from "livekit-client";
@@ -13,6 +15,7 @@ import { usePreferences } from "./Preferences";
 export default function LiveSession() {
   const { t } = usePreferences();
   const room = useRoomContext();
+  const { canPlayAudio, startAudio } = useAudioPlayback(room);
   const { localParticipant, isCameraEnabled, isMicrophoneEnabled } =
     useLocalParticipant();
   const tracks = useTracks([
@@ -62,7 +65,13 @@ export default function LiveSession() {
         ))}
       </div>
       <RoomAudioRenderer />
+      {!canPlayAudio && (
+        <button className="primary-action" onClick={() => void startAudio()}>
+          {t("Ativar reprodução de áudio")}
+        </button>
+      )}
       <div className="room-actions">
+        <MediaDeviceMenu />
         <button
           className="secondary-action"
           disabled={busy}

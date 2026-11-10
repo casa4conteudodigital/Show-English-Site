@@ -31,22 +31,48 @@ cd backend
 Documentação da API em http://localhost:8000/docs. Health check: `/health`.
 `requirements.txt` registra dependências diretas; `requirements.lock.txt` fixa as versões verificadas. `package-lock.json` fixa o frontend.
 
-## Ativar login e salas reais
+## Instalação de Auth e salas
 
-1. Criar ou selecionar um projeto Supabase. Executar `backend/schema.sql` uma vez no SQL Editor. Ele cria perfis, salas, vínculos e políticas RLS.
-2. No painel Auth, criar/convidar os colaboradores. Não há cadastro público na aplicação. Desabilitar signup público no Supabase, se não for utilizado por outro aplicativo.
-3. Inserir o UUID do usuário em `profiles` com papel `teacher` ou `admin`; criar a sala em `rooms` e seu vínculo em `room_members`. Isso é uma operação administrativa. Inclusive administradores precisam de vínculo explícito.
-4. Preencher `.env.local` com URL/chave pública do Supabase e URL pública da API Python. Reiniciar/recompilar o Next.js depois de alterar variáveis `NEXT_PUBLIC_*`.
-5. Preencher `backend/.env` com URL/chave pública do Supabase e URL/chave/segredo do LiveKit. Definir `FRONTEND_ORIGINS` com as origens exatas autorizadas, separadas por vírgula. O backend usa o JWT do próprio usuário em consultas ao Supabase, preservando RLS; não precisa de service_role.
-6. Hospedar LiveKit em infraestrutura externa apropriada para WebRTC, com domínio, TLS e portas/TURN configurados conforme documentação oficial. Não executar o servidor de mídia dentro de funções da Vercel.
-7. Hospedar a API FastAPI em um serviço Python/ASGI (por exemplo, VPS) e o Next.js em hospedagem compatível. A API e a mídia podem compartilhar uma VPS se sua capacidade permitir. Não existe deploy automático neste repositório.
-8. Em produção, frontend/API usam HTTPS e LiveKit usa WSS. Testar dois usuários autorizados em redes distintas, inclusive rede móvel, além de usuário sem vínculo. `getUserMedia` requer HTTPS, exceto localhost.
+Stack: Next.js 16/React 19, API FastAPI já existente, Supabase PostgreSQL/Auth e LiveKit Cloud. O vídeo/áudio vai direto do navegador ao LiveKit; Render hospeda apenas HTTP. Não há servidor LiveKit no Render.
 
-Os tokens têm validade de 10 minutos para entrada, identidade derivada da sessão validada e acesso a uma sala específica. Expirar o token **não encerra automaticamente uma chamada já conectada**. Remoção imediata de participantes e encerramento administrativo são evoluções futuras.
+### Supabase
 
-A API rejeita sessões ausentes/inválidas, usuários sem perfil de colaborador e salas não atribuídas/inativas. Não colocar `LIVEKIT_API_SECRET` nem credenciais privilegiadas em variáveis `NEXT_PUBLIC_*`.
+1. Para um projeto novo, cole `backend/schema.sql` no SQL Editor. Para uma instalação que já executou o schema anterior, aplique `backend/migrations/001_auth_classrooms.sql`. A migração incremental preserva perfis, papéis antigos, salas e vínculos; ela copia os papéis para `user_roles` e as salas antigas para `classrooms`.
+2. Confira a aplicação com `select version, applied_at from public.schema_migrations order by applied_at;`. A migração é idempotente, mas mantenha uma cópia do banco antes de aplicá-la em produção.
+3. Em Authentication > URL Configuration, configure Site URL como a origem publicada e inclua `http://localhost:3000/auth/callback`, `http://localhost:3000/redefinir-senha` e as rotas equivalentes no domínio de produção. Use apenas origens/destinos controlados por você.
+4. Em Authentication > Providers > Email, mantenha confirmação de e-mail ligada. Configure um provedor SMTP próprio para produção, valide domínio/DNS (SPF, DKIM e DMARC) e revise os limites de envio/rate limits no painel. O SMTP de teste do Supabase não é adequado para entrega pública; respeite o intervalo de reenvio mostrado pelo projeto.
+5. Configure os templates de confirmação e recuperação para direcionar ao callback da aplicação (o cliente solicita `/auth/callback` como redirect). O callback verifica o token/código, restaura a sessão e só aceita caminhos internos seguros.
+6. Para promover a conta do demonstrador, crie a conta pelo site, confirme o e-mail e copie o UUID em Authentication > Users. Execute no SQL Editor, substituindo o UUID: `insert into public.user_roles(user_id, role) values ('UUID-DO-USUARIO', 'teacher') on conflict (user_id, role) do nothing;`. Não use `user_metadata` para conceder permissões; somente SQL/admin confiável promove para professor/admin.
 
-Não foram fornecidas credenciais ou um servidor LiveKit, portanto login remoto, políticas no banco real e chamada entre participantes ainda precisam de validação de integração. Não há gravação, chat persistente, chamadas privadas ou aplicativo dos alunos nesta versão. As condições comerciais da hospedagem precisam ser adequadas antes da publicação.
+O cadastro público cria apenas perfil e papel `student`; não há tabela própria de senhas. Professores criam salas no painel. Para uma aula de demonstração aberta a usuários autenticados, escolha `authenticated_demo`; uma sala `members_only` exige associação prévia em `classroom_members` e o link sozinho não concede acesso. A tela nunca trata confirmação pendente como login concluído.
+
+### Ambiente local
+
+```bash
+cp .env.example .env.local
+cp backend/.env.example backend/.env
+```
+
+Preencha no frontend `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` e `NEXT_PUBLIC_API_URL`. No backend configure `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `APP_BASE_URL` e `ALLOWED_ORIGINS`. `SUPABASE_SERVICE_ROLE_KEY` é usada somente para persistir eventos webhook; nunca a coloque numa variável `NEXT_PUBLIC_*`. O nome LiveKit é opaco e nenhum token Supabase é reutilizado como token LiveKit.
+
+Inicie `backend/.venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8000` e, em outro terminal, `npm run dev`. Reinicie o Next.js ao mudar variáveis `NEXT_PUBLIC_*`. A URL compartilhada é `/salas/<id>`; o usuário entra, confirma o e-mail se necessário, retorna à sala e escolhe entrar. O painel oferece prévia local, câmera/microfone e saída.
+
+### Render e LiveKit Cloud
+
+`render.yaml` descreve dois Web Services HTTP gratuitos: Next.js e FastAPI. Revise os planos no Blueprint antes de criar serviços; não há deploy executado por esta alteração. Configure as variáveis marcadas `sync: false` no painel Render. Defina `NEXT_PUBLIC_API_URL` como a URL HTTPS do serviço API e `ALLOWED_ORIGINS` como a origem exata do site publicado (e `http://localhost:3000` durante desenvolvimento). Como `NEXT_PUBLIC_*` é incorporada ao build, dispare um novo build depois de alterá-la. O plano gratuito pode suspender serviços ociosos e causar cold start.
+
+No LiveKit Cloud, crie um projeto e configure o webhook para `https://<api-render>/api/livekit/webhook`, assinando com a mesma chave configurada no backend. LiveKit Cloud cuida da sinalização e mídia; não suba seu servidor de mídia no Render. O backend usa `LIVEKIT_URL` diretamente e pode apontar para uma futura implantação LiveKit própria em VM, sem alteração no cliente.
+
+### Demonstração com duas pessoas
+
+1. Confirme e-mail e entre com a conta promovida a `teacher`; crie uma sala `authenticated_demo` e copie o link `/salas/<id>`.
+2. Em outro perfil do navegador ou dispositivo, cadastre uma conta, confirme o e-mail e entre; abra o link compartilhado. Uma sala `members_only` rejeita usuários sem membro cadastrado.
+3. Ambos autorizam câmera/microfone mediante ação do usuário e entram. A grade e o áudio são transportados diretamente pelo LiveKit. Verifique também mutar/desmutar, sair e encerrar pelo professor.
+4. Para redes distintas, publique frontend/API em HTTPS e use a URL LiveKit Cloud WSS. `getUserMedia` não funciona em origens HTTP públicas.
+
+Tokens LiveKit têm TTL de 10 minutos e escopo de uma sala; cada aba/dispositivo recebe identidade opaca própria, estável durante reconexão, com limite de quatro sessões simultâneas por conta. O token não expulsa alguém já conectado ao expirar. Encerrar a aula marca `closed` no Supabase e remove participantes pela RoomService do LiveKit. A opção authenticated_demo é intencionalmente aberta a qualquer usuário autenticado e confirmado; não a use para aulas privadas.
+
+Não foram fornecidas credenciais Supabase/LiveKit, então autenticação remota, SMTP, execução real da migração, webhook e chamada entre dois dispositivos não puderam ser testados aqui. Testes automatizados usam mocks e não substituem a demonstração com câmera real. Revise os textos legais com orientação adequada antes da publicação.
 
 ## Validação
 
