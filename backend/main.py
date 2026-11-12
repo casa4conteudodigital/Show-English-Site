@@ -13,7 +13,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from livekit import api
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 load_dotenv()
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
@@ -100,6 +100,61 @@ async def supabase_patch(path: str, body: dict, token: str):
     return result.json() if result.content else None
 
 
+async def supabase_admin_invite(email: str, display_name: str):
+    url = config("SUPABASE_URL").rstrip("/")
+    key = config("SUPABASE_SERVICE_ROLE_KEY")
+    headers = {
+        "apikey": key,
+        "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json",
+    }
+    redirect_to = f"{config('APP_BASE_URL').rstrip('/')}/redefinir-senha?next=%2Fcolaboradores%2Fpainel"
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            result = await client.post(
+                f"{url}/auth/v1/invite",
+                params={"redirect_to": redirect_to},
+                headers=headers,
+                json={"email": email, "data": {"display_name": display_name}},
+            )
+    except httpx.RequestError:
+        raise HTTPException(503, "Não foi possível enviar o convite. Tente novamente.")
+    if result.status_code in (400, 409, 422):
+        try:
+            detail = result.json().get("msg", result.json().get("message", ""))
+        except ValueError:
+            detail = ""
+        if "already" in detail.lower() or "registered" in detail.lower() or "exists" in detail.lower():
+            raise HTTPException(409, "Já existe uma conta com este e-mail.")
+    if result.is_error:
+        logger.error("Supabase teacher invite failed with status %s", result.status_code)
+        raise HTTPException(502, "O Supabase não conseguiu criar o convite.")
+    return result.json()
+
+
+async def supabase_grant_teacher(user_id: str):
+    url = config("SUPABASE_URL").rstrip("/")
+    key = config("SUPABASE_SERVICE_ROLE_KEY")
+    headers = {
+        "apikey": key,
+        "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates,return=minimal",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            result = await client.post(
+                f"{url}/rest/v1/user_roles?on_conflict=user_id,role",
+                headers=headers,
+                json={"user_id": user_id, "role": "teacher"},
+            )
+    except httpx.RequestError:
+        raise HTTPException(503, "Convite enviado, mas não foi possível atribuir o acesso de professor.")
+    if result.is_error:
+        logger.error("Supabase teacher role assignment failed with status %s", result.status_code)
+        raise HTTPException(502, "Convite enviado, mas não foi possível atribuir o acesso de professor.")
+
+
 @asynccontextmanager
 async def livekit_client():
     client = api.LiveKitAPI(
@@ -138,6 +193,11 @@ def require_teacher(user: dict):
         raise HTTPException(403, "Apenas professores autorizados podem gerenciar salas.")
 
 
+def require_admin(user: dict):
+    if "admin" not in user["roles"]:
+        raise HTTPException(403, "Apenas administradores podem convidar professores.")
+
+
 @app.get("/health")
 @app.get("/api/health")
 async def health():
@@ -155,6 +215,33 @@ class RoomCreate(BaseModel):
     description: str | None = Field(default=None, max_length=1000)
     scheduled_start: datetime | None = None
     access_mode: str = Field(default="members_only", pattern="^(authenticated_demo|members_only)$")
+
+
+class TeacherInvite(BaseModel):
+    email: str = Field(min_length=6, max_length=254, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    display_name: str = Field(min_length=2, max_length=100)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, value):
+        return value.strip().lower() if isinstance(value, str) else value
+
+    @field_validator("display_name", mode="before")
+    @classmethod
+    def normalize_display_name(cls, value):
+        return value.strip()
+
+
+@app.post("/admin/teachers/invite")
+@app.post("/api/admin/teachers/invite")
+async def invite_teacher(body: TeacherInvite, user=Depends(current_user)):
+    require_admin(user)
+    invited = await supabase_admin_invite(body.email, body.display_name)
+    user_id = invited.get("id")
+    if not user_id:
+        raise HTTPException(502, "Convite criado sem identificador de usuário.")
+    await supabase_grant_teacher(user_id)
+    return {"status": "invited", "email": body.email}
 
 
 @app.get("/rooms")

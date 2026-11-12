@@ -13,6 +13,7 @@ export default function Login() {
   const { t } = usePreferences();
   const router = useRouter();
   const query = useSearchParams();
+  const selectedArea = query.get("next") === "/colaboradores/painel" ? "teacher" : "student";
   const [mode, setMode] = useState<Mode>("login");
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -119,6 +120,24 @@ export default function Login() {
         <section className="portal-card login-card">
           <h2>{t(mode === "signup" ? "Criar sua conta" : mode === "forgot" ? "Recuperar senha" : "Acesse sua conta")}</h2>
           <p>{t("Entre para consultar suas salas e iniciar uma aula.")}</p>
+          {mode === "login" && <nav className={`auth-area-switch is-${selectedArea}`} aria-label={t("Escolha sua área")}>
+            <Link
+              className="auth-area-option"
+              href="/colaboradores?next=%2Fcolaboradores%2Fpainel"
+              aria-label={t("Entrar como professor")}
+              aria-current={selectedArea === "teacher" ? "page" : undefined}
+            >
+              {t("Professor")}
+            </Link>
+            <Link
+              className="auth-area-option"
+              href="/colaboradores?next=%2Fsalas"
+              aria-label={t("Entrar como aluno")}
+              aria-current={selectedArea === "student" ? "page" : undefined}
+            >
+              {t("Aluno")}
+            </Link>
+          </nav>}
           {!supabase && <div className="notice">{t("Integração ainda não configurada.")}</div>}
           <form onSubmit={submit}>
             {mode === "signup" && <label className="field">{t("Nome completo")}<input name="name" autoComplete="name" minLength={2} maxLength={100} required disabled={!supabase || busy} /></label>}

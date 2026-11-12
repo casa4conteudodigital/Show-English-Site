@@ -21,6 +21,13 @@ import type { Locale } from "../lib/i18n";
 export default function Header() {
   const { t, locale, setLocale, settings, setSettings, theme, setTheme } =
     usePreferences();
+  const languageNames: Record<Locale, string> = {
+    "pt-BR": "Português",
+    en: "English",
+    es: "Español",
+    fr: "Français",
+    it: "Italiano",
+  };
   const modal = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -96,19 +103,20 @@ export default function Header() {
               <Globe2 size={19} aria-hidden="true" />
               <span className="sr-only">{t("Idioma")}</span>
               <select
-                aria-label={t("Idioma")}
+                aria-label={`${t("Idioma")}: ${languageNames[locale]}`}
+                title={languageNames[locale]}
                 value={locale}
                 onChange={(e) => setLocale(e.target.value as Locale)}
               >
-                <option value="pt-BR">Português</option>
-                <option value="en">English</option>
-                <option value="es">Español</option>
-                <option value="fr">Français</option>
-                <option value="it">Italiano</option>
+                <option value="pt-BR" aria-label="Português" title="Português">PT</option>
+                <option value="en" aria-label="English" title="English">EN</option>
+                <option value="es" aria-label="Español" title="Español">ES</option>
+                <option value="fr" aria-label="Français" title="Français">FR</option>
+                <option value="it" aria-label="Italiano" title="Italiano">IT</option>
               </select>
             </label>
             <Link className="staff-link" href="/colaboradores">
-              {t("Colaboradores")}
+              {t("Acessar Conta")}
               <ArrowUpRight size={16} />
             </Link>
             <a

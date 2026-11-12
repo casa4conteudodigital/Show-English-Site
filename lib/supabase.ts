@@ -20,13 +20,22 @@ export async function apiRequest(path: string, body?: object) {
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
-  if (!response.ok)
+  if (!response.ok) {
+    let detail = "";
+    try {
+      const payload = await response.json();
+      if (typeof payload.detail === "string") detail = payload.detail;
+    } catch {
+      detail = "";
+    }
+    if (detail) throw new Error(detail);
     throw new Error(
       response.status === 403
-        ? "Você não tem acesso a esta sala."
+        ? "Você não tem permissão para esta ação."
         : response.status === 401
           ? "Sua sessão expirou. Entre novamente."
           : "Não foi possível conectar. Tente novamente.",
     );
+  }
   return response.json();
 }

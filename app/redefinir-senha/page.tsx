@@ -2,6 +2,7 @@
 import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabase";
+import { safeInternalPath } from "../../lib/auth";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -22,9 +23,13 @@ function ResetPasswordForm() {
     setError("");
     try {
       const tokenHash = search.get("token_hash");
+      const tokenType = search.get("type");
       const code = search.get("code");
       if (tokenHash) {
-        const { error: verifyError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
+        if (tokenType !== "recovery" && tokenType !== "invite") {
+          throw new Error("O link de acesso é inválido ou expirou.");
+        }
+        const { error: verifyError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: tokenType });
         if (verifyError) throw verifyError;
       } else if (code) {
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
@@ -35,7 +40,8 @@ function ResetPasswordForm() {
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
       setDone(true);
-      window.setTimeout(() => router.replace("/salas"), 1200);
+      const next = safeInternalPath(search.get("next"), "/salas");
+      window.setTimeout(() => router.replace(next), 1200);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Não foi possível redefinir a senha.");
     } finally {

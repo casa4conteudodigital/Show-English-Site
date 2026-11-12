@@ -4,7 +4,7 @@ import Dashboard from "../../components/Dashboard";
 export default function RoomsPage() {
   return (
     <Suspense>
-      <Dashboard />
+      <Dashboard area="student" />
     </Suspense>
   );
 }

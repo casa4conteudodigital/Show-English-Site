@@ -75,6 +75,47 @@ def test_only_authorized_staff_can_create_classrooms(monkeypatch):
     assert response.status_code == 403
 
 
+def test_only_admins_can_invite_teachers(monkeypatch):
+    setup_user(monkeypatch, roles=("student",))
+
+    async def unexpected_invite(email, display_name):
+        raise AssertionError("non-admin invite reached Supabase")
+
+    monkeypatch.setattr(main, "supabase_admin_invite", unexpected_invite)
+    response = client.post(
+        "/api/admin/teachers/invite",
+        headers={"Authorization": "Bearer user-jwt"},
+        json={"email": "new.teacher@example.test", "display_name": "New Teacher"},
+    )
+    assert response.status_code == 403
+
+
+def test_admin_invite_creates_teacher_access(monkeypatch):
+    setup_user(monkeypatch, roles=("admin",))
+    calls = []
+
+    async def fake_invite(email, display_name):
+        calls.append(("invite", email, display_name))
+        return {"id": "new-user-id"}
+
+    async def fake_grant(user_id):
+        calls.append(("grant", user_id))
+
+    monkeypatch.setattr(main, "supabase_admin_invite", fake_invite)
+    monkeypatch.setattr(main, "supabase_grant_teacher", fake_grant)
+    response = client.post(
+        "/api/admin/teachers/invite",
+        headers={"Authorization": "Bearer user-jwt"},
+        json={"email": "  NEW.Teacher@Example.test ", "display_name": "  New Teacher  "},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"status": "invited", "email": "new.teacher@example.test"}
+    assert calls == [
+        ("invite", "new.teacher@example.test", "New Teacher"),
+        ("grant", "new-user-id"),
+    ]
+
+
 def test_invalid_room_uuid_is_rejected(monkeypatch):
     setup_user(monkeypatch)
     response = client.post(

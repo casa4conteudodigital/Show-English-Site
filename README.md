@@ -44,6 +44,16 @@ Stack: Next.js 16/React 19, API FastAPI já existente, Supabase PostgreSQL/Auth 
 5. Configure os templates de confirmação e recuperação para direcionar ao callback da aplicação (o cliente solicita `/auth/callback` como redirect). O callback verifica o token/código, restaura a sessão e só aceita caminhos internos seguros.
 6. Para promover a conta do demonstrador, crie a conta pelo site, confirme o e-mail e copie o UUID em Authentication > Users. Execute no SQL Editor, substituindo o UUID: `insert into public.user_roles(user_id, role) values ('UUID-DO-USUARIO', 'teacher') on conflict (user_id, role) do nothing;`. Não use `user_metadata` para conceder permissões; somente SQL/admin confiável promove para professor/admin.
 
+Para criar a primeira conta administradora, crie/convide a conta confiável, confirme o e-mail, copie seu UUID em Authentication > Users e execute no SQL Editor:
+
+```sql
+insert into public.user_roles(user_id, role)
+values ('UUID-DO-ADMINISTRADOR', 'admin')
+on conflict (user_id, role) do nothing;
+```
+
+Essa conta pode abrir `/colaboradores/administracao` e convidar professores pelo nome e e-mail. O backend usa `SUPABASE_SERVICE_ROLE_KEY` para enviar o convite e conceder `teacher`; essa chave nunca é enviada ao navegador. O convidado define sua própria senha em `/redefinir-senha` e segue para o painel. Em Authentication > URL Configuration, mantenha a URL pública `/redefinir-senha` na lista de Redirect URLs. Cadastros públicos continuam recebendo somente o papel `student`.
+
 O cadastro público cria apenas perfil e papel `student`; não há tabela própria de senhas. Professores criam salas no painel. Para uma aula de demonstração aberta a usuários autenticados, escolha `authenticated_demo`; uma sala `members_only` exige associação prévia em `classroom_members` e o link sozinho não concede acesso. A tela nunca trata confirmação pendente como login concluído.
 
 ### Ambiente local

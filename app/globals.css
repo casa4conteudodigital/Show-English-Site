@@ -350,6 +350,63 @@ select {
 .auth-links button:disabled {
   opacity: 0.55;
 }
+.auth-area-switch {
+  --switch-accent: #d7eaff;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 5px;
+  margin: 18px 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-raised);
+}
+.auth-area-switch::before {
+  position: absolute;
+  z-index: -1;
+  top: 5px;
+  bottom: 5px;
+  left: 5px;
+  width: calc(50% - 2px);
+  border-radius: 10px;
+  background: var(--switch-accent);
+  box-shadow: 0 3px 9px #14264b26;
+  content: "";
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.auth-area-switch.is-student::before {
+  transform: translateX(100%);
+}
+.auth-area-switch .auth-area-option {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 10px;
+  color: var(--foreground);
+  font-size: 0.88em;
+  font-weight: 750;
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+.auth-area-switch .auth-area-option[aria-current="page"] {
+  color: #193f8d;
+}
+.auth-area-switch .auth-area-option:focus-visible {
+  z-index: 1;
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-area-switch::before,
+  .auth-area-switch .auth-area-option {
+    transition: none;
+  }
+}
 .text-action {
   margin-top: 16px;
 }
@@ -386,6 +443,21 @@ select {
 }
 .room-card h2 {
   margin: 18px 0 8px;
+}
+.room-list-heading {
+  margin: 28px 0 16px;
+}
+.admin-teachers-page {
+  max-width: 860px;
+}
+.admin-invite-form {
+  max-width: 620px;
+}
+.admin-invite-form h2 {
+  margin-top: 0;
+}
+.admin-invite-form .primary-action {
+  margin-top: 12px;
 }
 .room-card .primary-action {
   margin-top: 24px;

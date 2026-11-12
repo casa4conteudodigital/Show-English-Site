@@ -3,7 +3,7 @@ import Dashboard from "../../../components/Dashboard";
 export default function Page() {
   return (
     <Suspense>
-      <Dashboard />
+      <Dashboard area="teacher" />
     </Suspense>
   );
 }

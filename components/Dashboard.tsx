@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Video, ArrowUpRight, Copy, Link2, Plus } from "lucide-react";
+import { Video, ArrowUpRight, Copy, Link2, Plus, UserPlus } from "lucide-react";
 import type { FormEvent } from "react";
 import { supabase, apiRequest } from "../lib/supabase";
 import { usePreferences } from "./Preferences";
@@ -18,7 +18,10 @@ type Room = {
   media_active?: boolean | null;
   participant_count?: number | null;
 };
-export default function Dashboard() {
+type DashboardProps = {
+  area: "teacher" | "student";
+};
+export default function Dashboard({ area }: DashboardProps) {
   const { t, locale } = usePreferences();
   const query = useSearchParams();
   const pathname = usePathname();
@@ -30,6 +33,7 @@ export default function Dashboard() {
   const [error, setError] = useState("");
   const [userId, setUserId] = useState("");
   const [canManage, setCanManage] = useState(false);
+  const [canStudy, setCanStudy] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [title, setTitle] = useState("");
   const [startsAt, setStartsAt] = useState("");
@@ -70,10 +74,22 @@ export default function Dashboard() {
           return;
         }
         const [result, me] = await Promise.all([apiRequest("/rooms"), apiRequest("/me")]);
+        const canTeach = me.roles.includes("teacher") || me.roles.includes("admin");
+        const canStudy = me.roles.includes("student");
+        if (area === "teacher" && !canTeach) {
+          if (canStudy) router.replace("/salas");
+          else setError("Seu perfil não tem permissão para acessar esta área.");
+          return;
+        }
+        if (area === "student" && !canStudy && canTeach) {
+          router.replace("/colaboradores/painel");
+          return;
+        }
         if (live) {
           setName(user.email || "");
           setUserId(user.id);
           setCanManage(me.roles.includes("teacher") || me.roles.includes("admin"));
+          setCanStudy(me.roles.includes("student"));
           setIsAdmin(me.roles.includes("admin"));
           setRooms(result);
         }
@@ -92,7 +108,7 @@ export default function Dashboard() {
     return () => {
       live = false;
     };
-  }, [demo, pathname, router]);
+  }, [area, demo, pathname, router]);
 
   async function createRoom(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -176,11 +192,23 @@ export default function Dashboard() {
             <span className="overline">
               SHOW ENGLISH • {t("COLABORADORES")}
             </span>
-            <h1>{t("Suas salas de aula")}</h1>
+            <h1>{t(area === "teacher" ? "Área do professor" : "Área do aluno")}</h1>
             <p>
               {demo ? t("Explore o painel antes de conectar sua conta.") : name}
             </p>
           </div>
+          {area === "teacher" && canStudy && (
+            <Link className="secondary-action" href="/salas">{t("Área do aluno")}</Link>
+          )}
+          {area === "student" && canManage && (
+            <Link className="secondary-action" href="/colaboradores/painel">{t("Área do professor")}</Link>
+          )}
+          {isAdmin && !demo && (
+            <Link className="secondary-action" href="/colaboradores/administracao">
+              <UserPlus size={17} />
+              {t("Convidar professor")}
+            </Link>
+          )}
           <button
             className="secondary-action"
             onClick={async () => {
@@ -197,7 +225,7 @@ export default function Dashboard() {
             {t("Demonstração: dados fictícios, sem chamada conectada.")}
           </div>
         )}
-        {!demo && canManage && (
+        {!demo && area === "teacher" && canManage && (
           <form className="portal-card room-create-form" onSubmit={createRoom}>
             <h2>{t("Criar nova sala")}</h2>
             <div className="room-create-fields">
@@ -249,6 +277,7 @@ export default function Dashboard() {
             {t(error)}
           </p>
         )}
+        <h2 className="room-list-heading">{t("Minhas salas")}</h2>
         {loading ? (
           <p role="status">{t("Carregando…")}</p>
         ) : (
@@ -309,7 +338,9 @@ export default function Dashboard() {
         )}
         {!loading && !rooms.length && !error && (
           <div className="portal-card">
-            {t("Nenhuma sala atribuída. Entre em contato com a administração.")}
+            {t(area === "teacher"
+              ? "Você ainda não criou salas. Use o formulário acima para agendar a primeira aula."
+              : "Você ainda não tem salas disponíveis. Entre em contato com a equipe Show English.")}
           </div>
         )}
       </div>
