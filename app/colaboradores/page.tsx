@@ -16,6 +16,7 @@ export default function Login() {
   const selectedArea = query.get("next") === "/colaboradores/painel" ? "teacher" : "student";
   const [mode, setMode] = useState<Mode>("login");
   const [show, setShow] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -143,7 +144,7 @@ export default function Login() {
             {mode === "signup" && <label className="field">{t("Nome completo")}<input name="name" autoComplete="name" minLength={2} maxLength={100} required disabled={!supabase || busy} /></label>}
             <label className="field">{t("E-mail")}<input type="email" name="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required disabled={!supabase || busy} /></label>
             {mode !== "forgot" && <label className="field">{t("Senha")}<span className="password-field"><input type={show ? "text" : "password"} name="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={8} required disabled={!supabase || busy} /><button type="button" className="icon-button" aria-label={t(show ? "Ocultar senha" : "Mostrar senha")} onClick={() => setShow(!show)}>{show ? <EyeOff size={20} /> : <Eye size={20} />}</button></span></label>}
-            {mode === "signup" && <><label className="field">{t("Confirmar senha")}<input type={show ? "text" : "password"} name="confirmPassword" autoComplete="new-password" minLength={8} required disabled={!supabase || busy} /></label><label className="terms-check"><input type="checkbox" name="terms" required disabled={!supabase || busy} /><span>{t("Li e aceito os")} <Link href="/termos" target="_blank">{t("termos de uso")}</Link> {t("e a")} <Link href="/privacidade" target="_blank">{t("política de privacidade")}</Link>.</span></label></>}
+            {mode === "signup" && <><label className="field">{t("Confirmar senha")}<span className="password-field"><input type={showConfirm ? "text" : "password"} name="confirmPassword" autoComplete="new-password" minLength={8} required disabled={!supabase || busy} /><button type="button" className="icon-button" aria-label={t(showConfirm ? "Ocultar senha" : "Mostrar senha")} onClick={() => setShowConfirm(!showConfirm)} disabled={busy}>{showConfirm ? <EyeOff size={20} /> : <Eye size={20} />}</button></span></label><label className="terms-check"><input type="checkbox" name="terms" required disabled={!supabase || busy} /><span>{t("Li e aceito os")} <Link href="/termos" target="_blank">{t("termos de uso")}</Link> {t("e a")} <Link href="/privacidade" target="_blank">{t("política de privacidade")}</Link>.</span></label></>}
             {error && <p className="error" role="alert">{t(error)}</p>}
             {notice && <p className="notice" role="status">{t(notice)}</p>}
             <button className="primary-action" disabled={!supabase || busy}><span>{t(busy ? "Aguarde…" : mode === "signup" ? "Criar conta" : mode === "forgot" ? "Enviar link de recuperação" : "Entrar")}</span><ArrowRight size={18} /></button>
